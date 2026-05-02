@@ -1,8 +1,19 @@
 import 'package:flutter/material.dart';
-import 'screens/login_page.dart';
+import 'package:provider/provider.dart';
+import 'package:borrow_manager/views/screens/auth/login_page.dart';
+import 'package:borrow_manager/viewmodels/language_provider.dart';
+import 'package:borrow_manager/viewmodels/transaction_viewmodel.dart';
 
 void main() {
-  runApp(const BorrowManagerApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => LanguageProvider()),
+        ChangeNotifierProvider(create: (context) => TransactionViewModel()),
+      ],
+      child: const BorrowManagerApp(),
+    ),
+  );
 }
 
 class BorrowManagerApp extends StatelessWidget {
@@ -28,13 +39,3 @@ class BorrowManagerApp extends StatelessWidget {
     );
   }
 }
-
-powershell
-# 1. Stage all changes
-git add .
-
-# 2. Commit the changes
-git commit -m "Added client management, login validation, and local database"
-
-# 3. Push to your main branch (using --force to clear the rebase state)
-git push origin main --force

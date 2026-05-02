@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/database_helper.dart';
-import 'add_client_page.dart';
+import 'package:borrow_manager/data/sources/local/database_helper.dart';
+import 'package:borrow_manager/views/screens/clients/add_client_page.dart';
 
 class ClientsListPage extends StatefulWidget {
   const ClientsListPage({super.key});

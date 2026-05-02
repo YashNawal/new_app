@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/database_helper.dart';
+import 'package:borrow_manager/data/sources/local/database_helper.dart';
 
 class AddClientPage extends StatefulWidget {
   const AddClientPage({super.key});
