@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:borrow_manager/data/sources/local/database_helper.dart';
+import 'package:provider/provider.dart';
+import 'package:borrow_manager/viewmodels/client_viewmodel.dart';
 import 'package:borrow_manager/views/screens/clients/add_client_page.dart';
 
 class ClientsListPage extends StatefulWidget {
@@ -10,116 +12,200 @@ class ClientsListPage extends StatefulWidget {
 }
 
 class _ClientsListPageState extends State<ClientsListPage> {
-  List<Map<String, dynamic>> _clients = [];
+  String _selectedFilter = 'All';
+  final List<String> _filters = ['All', 'Owes Me', 'I Owe', 'Settled'];
   String _searchQuery = '';
-  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _refreshClients();
-  }
-
-  Future<void> _refreshClients() async {
-    setState(() => _isLoading = true);
-    final data = await DatabaseHelper().queryAllClients();
-    setState(() {
-      _clients = data;
-      _isLoading = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ClientViewModel>().fetchClients();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    const tealColor = Color(0xFF00897B);
-
-    final filteredClients = _clients
-        .where((c) => c['name'].toString().toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
+    const primaryGreen = Color(0xFF1B4332);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Clients List'),
+      backgroundColor: Colors.grey[50],
+      body: Consumer<ClientViewModel>(
+        builder: (context, vm, child) {
+          final filteredClients = vm.clients.where((c) {
+            bool matchesSearch = c.name.toLowerCase().contains(_searchQuery.toLowerCase());
+            if (!matchesSearch) return false;
+            
+            if (_selectedFilter == 'Owes Me') return c.isOwesMe && c.balance > 0;
+            if (_selectedFilter == 'I Owe') return !c.isOwesMe && c.balance > 0;
+            if (_selectedFilter == 'Settled') return c.balance == 0;
+            return true;
+          }).toList();
+
+          return Column(
+            children: [
+              _buildHeader(primaryGreen),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 20),
+                      _buildSectionHeader(),
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: vm.isLoading 
+                          ? const Center(child: CircularProgressIndicator())
+                          : filteredClients.isEmpty
+                            ? const Center(child: Text('No clients found'))
+                            : ListView.builder(
+                                padding: EdgeInsets.zero,
+                                itemCount: filteredClients.length,
+                                itemBuilder: (context, index) {
+                                  final client = filteredClients[index];
+                                  return _buildClientCard(client);
+                                },
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
-      body: Column(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AddClientPage())),
+        backgroundColor: const Color(0xFF2D6A4F),
+        child: const Icon(Icons.add, color: Colors.white, size: 30),
+      ),
+    );
+  }
+
+  Widget _buildHeader(Color primaryGreen) {
+    return Container(
+      padding: const EdgeInsets.only(top: 50, bottom: 20),
+      decoration: BoxDecoration(
+        color: primaryGreen,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(35)),
+      ),
+      child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: TextField(
-              onChanged: (val) => setState(() => _searchQuery = val),
-              decoration: InputDecoration(
-                hintText: 'Search Client...',
-                prefixIcon: const Icon(Icons.search, color: tealColor),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Icon(Icons.menu, color: Colors.white),
+                const Text('Manage Clients', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                const CircleAvatar(radius: 18, backgroundColor: Colors.white24, child: Icon(Icons.person, color: Colors.white70)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 25),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Container(
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30)),
+              child: TextField(
+                onChanged: (val) => setState(() => _searchQuery = val),
+                decoration: const InputDecoration(
+                  hintText: 'Search clients',
+                  prefixIcon: Icon(Icons.search, color: Colors.grey),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(vertical: 15),
+                ),
               ),
             ),
           ),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : filteredClients.isEmpty
-                    ? const Center(child: Text('No clients found.'))
-                    : ListView.builder(
-                        itemCount: filteredClients.length,
-                        itemBuilder: (context, index) {
-                          final client = filteredClients[index];
-                          final balance = client['balance'] ?? 0.0;
-                          final bool isOwesMe = client['isOwesMe'] == 1;
-
-                          return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              side: BorderSide(color: Colors.grey.shade200),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: tealColor.withOpacity(0.1),
-                                child: const Icon(Icons.person, color: tealColor),
-                              ),
-                              title: Text(client['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text(client['phone']),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    '₹$balance',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: balance == 0
-                                          ? Colors.grey
-                                          : (isOwesMe ? Colors.green : Colors.red),
-                                    ),
-                                  ),
-                                  Text(
-                                    balance == 0 ? 'Settled' : (isOwesMe ? 'Owes Me' : 'I Owe'),
-                                    style: const TextStyle(fontSize: 10, color: Colors.grey),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+          const SizedBox(height: 25),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.only(left: 20),
+            child: Row(
+              children: _filters.map((filter) => _buildFilterChip(filter)).toList(),
+            ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AddClientPage()),
-          );
+    );
+  }
 
-          if (result == true) {
-            _refreshClients(); // Refresh list if a client was added
-          }
-        },
-        backgroundColor: tealColor,
-        child: const Icon(Icons.person_add, color: Colors.white),
+  Widget _buildFilterChip(String label) {
+    bool isSelected = _selectedFilter == label;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedFilter = label),
+      child: Container(
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF409167) : Colors.white,
+          borderRadius: BorderRadius.circular(25),
+        ),
+        child: Text(label, style: TextStyle(color: isSelected ? Colors.white : Colors.black54, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text('RECENT CLIENTS', style: TextStyle(letterSpacing: 1.2, color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 11)),
+        Icon(Icons.tune, color: Colors.grey[400], size: 20),
+      ],
+    );
+  }
+
+  Widget _buildClientCard(dynamic client) {
+    bool isSettled = client.balance == 0;
+    bool isOwe = !client.isOwesMe;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 25,
+            backgroundColor: Colors.grey.shade200,
+            backgroundImage: client.imagePath != null ? FileImage(File(client.imagePath!)) : null,
+            child: client.imagePath == null ? const Icon(Icons.person, color: Colors.grey) : null,
+          ),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(client.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text('Last activity: Just now', style: TextStyle(color: Colors.grey, fontSize: 12)),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${isSettled ? '' : (isOwe ? '' : '+')}₹${client.balance}',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: isSettled ? Colors.grey : (isOwe ? Colors.red[800] : Colors.green[800]),
+                ),
+              ),
+              Text(
+                isSettled ? 'SETTLED' : (isOwe ? 'YOU OWE' : 'YOU RECEIVE'),
+                style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

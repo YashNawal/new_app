@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:borrow_manager/views/screens/auth/login_page.dart';
 import 'package:borrow_manager/viewmodels/language_provider.dart';
 import 'package:borrow_manager/viewmodels/transaction_viewmodel.dart';
+import 'package:borrow_manager/viewmodels/client_viewmodel.dart';
 
 void main() {
   runApp(
@@ -10,6 +11,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (context) => LanguageProvider()),
         ChangeNotifierProvider(create: (context) => TransactionViewModel()),
+        ChangeNotifierProvider(create: (context) => ClientViewModel()),
       ],
       child: const BorrowManagerApp(),
     ),
