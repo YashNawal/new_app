@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../services/database_helper.dart';
-import '../services/language_provider.dart';
+import 'package:borrow_manager/data/sources/local/database_helper.dart';
+import 'package:borrow_manager/viewmodels/language_provider.dart';
 
 class AddReminderPage extends StatefulWidget {
   const AddReminderPage({super.key});

@@ -13,6 +13,12 @@ dependencies:
   intl: ^0.18.1
   sqflite: ^2.3.0
   path: ^1.8.3
+  provider: ^6.1.1
+  google_sign_in: ^6.2.1
+  googleapis: ^13.1.0
+  extension_google_sign_in_as_googleapis_auth: ^2.0.13
+  shared_preferences: ^2.2.2
+  uuid: ^4.5.3
 
 dev_dependencies:
   flutter_test:
@@ -21,3 +27,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/add_client.png
+    - assets/images/lend_borrow.png
+    - assets/images/reminder.png
+    - assets/images/client_list.png
