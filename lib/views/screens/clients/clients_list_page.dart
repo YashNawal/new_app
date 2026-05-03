@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:borrow_manager/viewmodels/client_viewmodel.dart';
 import 'package:borrow_manager/views/screens/clients/add_client_page.dart';
+import 'package:borrow_manager/views/screens/clients/client_detail_page.dart';
 
 class ClientsListPage extends StatefulWidget {
   const ClientsListPage({super.key});
@@ -63,7 +64,13 @@ class _ClientsListPageState extends State<ClientsListPage> {
                                 itemCount: filteredClients.length,
                                 itemBuilder: (context, index) {
                                   final client = filteredClients[index];
-                                  return _buildClientCard(client);
+                                  return InkWell(
+                                    onTap: () => Navigator.push(
+                                      context, 
+                                      MaterialPageRoute(builder: (context) => ClientDetailPage(client: client))
+                                    ),
+                                    child: _buildClientCard(client),
+                                  );
                                 },
                               ),
                       ),
@@ -97,7 +104,10 @@ class _ClientsListPageState extends State<ClientsListPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Icon(Icons.menu, color: Colors.white),
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
                 const Text('Manage Clients', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                 const CircleAvatar(radius: 18, backgroundColor: Colors.white24, child: Icon(Icons.person, color: Colors.white70)),
               ],
@@ -151,9 +161,8 @@ class _ClientsListPageState extends State<ClientsListPage> {
   Widget _buildSectionHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const Text('RECENT CLIENTS', style: TextStyle(letterSpacing: 1.2, color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 11)),
-        Icon(Icons.tune, color: Colors.grey[400], size: 20),
+      children: const [
+        Text('RECENT CLIENTS', style: TextStyle(letterSpacing: 1.2, color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 11)),
       ],
     );
   }
