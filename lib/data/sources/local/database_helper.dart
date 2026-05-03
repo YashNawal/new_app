@@ -32,7 +32,8 @@ class DatabaseHelper {
         email TEXT,
         address TEXT,
         balance REAL,
-        isOwesMe INTEGER
+        isOwesMe INTEGER,
+        imagePath TEXT
       )
     ''');
 
