@@ -1,91 +1,113 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
-import 'package:path/path.dart' as p;
-import 'package:sqflite/sqflite.dart';
+import 'database_helper.dart';
 
 class GoogleDriveService {
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [drive.DriveApi.driveFileScope],
+  // On Android, the Client ID should NOT be passed in the code.
+  // It is automatically picked up from the Package Name and SHA-1 fingerprint 
+  // configured in your Google Cloud Console.
+  // We only provide a clientId here if we are running on the Web.
+  static final _googleSignIn = GoogleSignIn(
+    clientId: kIsWeb ? '655690713664-740dkm368pcte674u26td5kiar3fqto1.apps.googleusercontent.com' : null,
+    scopes: [drive.DriveApi.driveAppdataScope],
   );
 
-  Future<void> uploadBackup() async {
+  static Future<GoogleSignInAccount?> signIn() async {
     try {
-      final googleSignInAccount = await _googleSignIn.signInSilently() ?? await _googleSignIn.signIn();
-      if (googleSignInAccount == null) return;
-
-      final httpClient = await _googleSignIn.authenticatedClient();
-      if (httpClient == null) return;
-
-      final driveApi = drive.DriveApi(httpClient);
-
-      // Get the database path
-      String dbPath = await getDatabasesPath();
-      String path = p.join(dbPath, 'borrow_manager.db'); // Change this to your actual DB name
-      File file = File(path);
-
-      if (!await file.exists()) {
-        print('Database file not found at $path');
-        return;
+      debugPrint('GoogleDriveService: Starting sign-in...');
+      // Sign out first to ensure the account picker always appears if there was an error
+      if (await _googleSignIn.isSignedIn()) {
+        await _googleSignIn.signOut();
       }
-
-      // Check if file already exists on Drive
-      final query = "name = 'borrow_manager_backup.db' and trashed = false";
-      final fileList = await driveApi.files.list(q: query);
-      
-      final driveFile = drive.File();
-      driveFile.name = 'borrow_manager_backup.db';
-
-      final media = drive.Media(file.openRead(), await file.length());
-
-      if (fileList.files != null && fileList.files!.isNotEmpty) {
-        // Update existing file
-        final fileId = fileList.files!.first.id!;
-        await driveApi.files.update(driveFile, fileId, uploadMedia: media);
-        print('Backup updated on Google Drive');
-      } else {
-        // Create new file
-        await driveApi.files.create(driveFile, uploadMedia: media);
-        print('New backup created on Google Drive');
-      }
+      final account = await _googleSignIn.signIn();
+      debugPrint('GoogleDriveService: Sign-in result: ${account?.email}');
+      return account;
     } catch (e) {
-      print('Error uploading to Google Drive: $e');
+      debugPrint('GoogleDriveService: Sign-in error: $e');
+      rethrow;
     }
   }
 
-  Future<void> restoreBackup() async {
+  static Future<GoogleSignInAccount?> signInSilently() async {
+    return await _googleSignIn.signInSilently();
+  }
+
+  static Future<void> signOut() async {
+    await _googleSignIn.signOut();
+  }
+
+  static Future<drive.DriveApi?> _getDriveApi() async {
+    GoogleSignInAccount? account = _googleSignIn.currentUser;
+    account ??= await _googleSignIn.signInSilently();
+    
+    if (account == null) return null;
+
+    final authClient = await _googleSignIn.authenticatedClient();
+    if (authClient == null) return null;
+
+    return drive.DriveApi(authClient);
+  }
+
+  static Future<bool> backupDatabase() async {
     try {
-      final googleSignInAccount = await _googleSignIn.signInSilently() ?? await _googleSignIn.signIn();
-      if (googleSignInAccount == null) return;
+      final driveApi = await _getDriveApi();
+      if (driveApi == null) return false;
 
-      final httpClient = await _googleSignIn.authenticatedClient();
-      if (httpClient == null) return;
+      final dbPath = await DatabaseHelper().getDatabasePath();
+      final file = File(dbPath);
 
-      final driveApi = drive.DriveApi(httpClient);
+      final query = "name = 'borrow_manager_backup.db' and 'appDataFolder' in parents";
+      final fileList = await driveApi.files.list(q: query, spaces: 'appDataFolder');
 
-      final query = "name = 'borrow_manager_backup.db' and trashed = false";
-      final fileList = await driveApi.files.list(q: query);
+      final driveFile = drive.File()
+        ..name = 'borrow_manager_backup.db'
+        ..parents = ['appDataFolder'];
+
+      final media = drive.Media(file.openRead(), file.lengthSync());
 
       if (fileList.files != null && fileList.files!.isNotEmpty) {
-        final fileId = fileList.files!.first.id!;
-        drive.Media response = await driveApi.files.get(fileId, downloadOptions: drive.DownloadOptions.fullMedia) as drive.Media;
-
-        String dbPath = await getDatabasesPath();
-        String path = p.join(dbPath, 'borrow_manager.db');
-        File file = File(path);
-
-        final List<int> dataStore = [];
-        await for (final data in response.stream) {
-          dataStore.addAll(data);
-        }
-        await file.writeAsBytes(dataStore);
-        print('Backup restored from Google Drive');
+        await driveApi.files.update(driveFile, fileList.files!.first.id!, uploadMedia: media);
       } else {
-        print('No backup found on Google Drive');
+        await driveApi.files.create(driveFile, uploadMedia: media);
       }
+      return true;
     } catch (e) {
-      print('Error restoring from Google Drive: $e');
+      debugPrint('Backup error: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> restoreDatabase() async {
+    try {
+      final driveApi = await _getDriveApi();
+      if (driveApi == null) return false;
+
+      final query = "name = 'borrow_manager_backup.db' and 'appDataFolder' in parents";
+      final fileList = await driveApi.files.list(q: query, spaces: 'appDataFolder');
+
+      if (fileList.files == null || fileList.files!.isEmpty) return false;
+
+      final fileId = fileList.files!.first.id!;
+      final response = await driveApi.files.get(fileId, downloadOptions: drive.DownloadOptions.fullMedia) as drive.Media;
+      
+      final dbPath = await DatabaseHelper().getDatabasePath();
+      final file = File(dbPath);
+      
+      final List<int> dataStore = [];
+      await response.stream.listen((data) {
+        dataStore.addAll(data);
+      }).asFuture();
+
+      if (dataStore.isEmpty) return false;
+
+      await file.writeAsBytes(dataStore);
+      return true;
+    } catch (e) {
+      debugPrint('Restore error: $e');
+      return false;
     }
   }
 }
