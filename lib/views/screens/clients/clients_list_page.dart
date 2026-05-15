@@ -30,13 +30,13 @@ class _ClientsListPageState extends State<ClientsListPage> {
     const primaryGreen = Color(0xFF1B4332);
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Colors.white,
       body: Consumer<ClientViewModel>(
         builder: (context, vm, child) {
           final filteredClients = vm.clients.where((c) {
             bool matchesSearch = c.name.toLowerCase().contains(_searchQuery.toLowerCase());
             if (!matchesSearch) return false;
-            
+
             if (_selectedFilter == 'Owes Me') return c.isOwesMe && c.balance > 0;
             if (_selectedFilter == 'I Owe') return !c.isOwesMe && c.balance > 0;
             if (_selectedFilter == 'Settled') return c.balance == 0;
@@ -51,9 +51,6 @@ class _ClientsListPageState extends State<ClientsListPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
                   child: Column(
                     children: [
-                      const SizedBox(height: 20),
-                      _buildSectionHeader(),
-                      const SizedBox(height: 16),
                       Expanded(
                         child: vm.isLoading 
                           ? const Center(child: CircularProgressIndicator())
@@ -91,128 +88,230 @@ class _ClientsListPageState extends State<ClientsListPage> {
   }
 
   Widget _buildHeader(Color primaryGreen) {
+
     return Container(
-      padding: const EdgeInsets.only(top: 50, bottom: 20),
-      decoration: BoxDecoration(
-        color: primaryGreen,
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(35)),
+
+      padding: const EdgeInsets.only(
+        top: 20,
+        left: 10,
+        right: 10,
+        bottom: 10,
       ),
-      child: Column(
+
+      color: const Color(0xFF009688),
+
+      child: Row(
+
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                const Text('Manage Clients', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                const CircleAvatar(radius: 18, backgroundColor: Colors.white24, child: Icon(Icons.person, color: Colors.white70)),
-              ],
+
+          IconButton(
+            icon: const Icon(
+              Icons.arrow_back,
+              color: Colors.white,
             ),
+
+            onPressed: () => Navigator.pop(context),
           ),
-          const SizedBox(height: 25),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30)),
-              child: TextField(
-                onChanged: (val) => setState(() => _searchQuery = val),
-                decoration: const InputDecoration(
-                  hintText: 'Search clients',
-                  prefixIcon: Icon(Icons.search, color: Colors.grey),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 15),
-                ),
+
+          const SizedBox(width: 10),
+
+          const Expanded(
+            child: Text(
+
+              "Clients List",
+
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
-          const SizedBox(height: 25),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.only(left: 20),
-            child: Row(
-              children: _filters.map((filter) => _buildFilterChip(filter)).toList(),
-            ),
+
+          const Icon(
+            Icons.search,
+            color: Colors.white,
+            size: 30,
+          ),
+
+          const SizedBox(width: 20),
+
+          const Icon(
+            Icons.person_add_alt_outlined,
+            color: Colors.white,
+            size: 30,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFilterChip(String label) {
-    bool isSelected = _selectedFilter == label;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedFilter = label),
-      child: Container(
-        margin: const EdgeInsets.only(right: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF409167) : Colors.white,
-          borderRadius: BorderRadius.circular(25),
-        ),
-        child: Text(label, style: TextStyle(color: isSelected ? Colors.white : Colors.black54, fontWeight: FontWeight.bold)),
-      ),
-    );
-  }
 
-  Widget _buildSectionHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: const [
-        Text('RECENT CLIENTS', style: TextStyle(letterSpacing: 1.2, color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 11)),
-      ],
-    );
-  }
+
 
   Widget _buildClientCard(dynamic client) {
-    bool isSettled = client.balance == 0;
-    bool isOwe = !client.isOwesMe;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 10,
       ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 25,
-            backgroundColor: Colors.grey.shade200,
-            backgroundImage: client.imagePath != null ? FileImage(File(client.imagePath!)) : null,
-            child: client.imagePath == null ? const Icon(Icons.person, color: Colors.grey) : null,
+
+      decoration: BoxDecoration(
+
+        color: Colors.white,
+
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.grey.shade300,
+            width: 1,
           ),
-          const SizedBox(width: 15),
+        ),
+      ),
+
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+
+        children: [
+
+          /// PROFILE IMAGE
+
+          CircleAvatar(
+            radius: 32,
+
+            backgroundColor: Colors.white,
+
+            backgroundImage:
+            client.imagePath != null
+                ? FileImage(File(client.imagePath!))
+                : null,
+
+            child: client.imagePath == null
+                ? Icon(
+              Icons.person_outline,
+              size: 50,
+              color: Colors.grey.shade700,
+            )
+                : null,
+          ),
+
+          const SizedBox(width: 14),
+
+          /// CLIENT DETAILS
+
           Expanded(
+
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+              CrossAxisAlignment.start,
+
               children: [
-                Text(client.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const Text('Last activity: Just now', style: TextStyle(color: Colors.grey, fontSize: 12)),
+
+                /// NAME
+
+                Text(
+                  client.name,
+
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                /// GAVE + RECEIVED
+
+                Row(
+                  children: [
+
+                    /// GAVE
+
+                    Row(
+                      children: [
+
+                        Container(
+
+                          padding: const EdgeInsets.all(4),
+
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.red.shade50,
+                          ),
+
+                          child: const Icon(
+                            Icons.arrow_upward,
+                            color: Colors.red,
+                            size: 24,
+                          ),
+                        ),
+
+                        const SizedBox(width: 6),
+
+                        Text(
+                          "₹:${client.isOwesMe ? client.balance : 0.0}",
+
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(width: 40),
+
+                    /// RECEIVED
+
+                    Row(
+                      children: [
+
+                        Container(
+
+                          padding: const EdgeInsets.all(4),
+
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.green.shade50,
+                          ),
+
+                          child: const Icon(
+                            Icons.arrow_downward,
+                            color: Colors.green,
+                            size: 24,
+                          ),
+                        ),
+
+                        const SizedBox(width: 6),
+
+                        Text(
+                          "₹:${!client.isOwesMe ? client.balance : 0.0}",
+
+                          style: const TextStyle(
+                            color: Colors.green,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${isSettled ? '' : (isOwe ? '' : '+')}₹${client.balance}',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: isSettled ? Colors.grey : (isOwe ? Colors.red[800] : Colors.green[800]),
-                ),
-              ),
-              Text(
-                isSettled ? 'SETTLED' : (isOwe ? 'YOU OWE' : 'YOU RECEIVE'),
-                style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold),
-              ),
-            ],
+
+          /// MORE ICON
+
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+
+            child: Icon(
+              Icons.more_vert,
+              color: Colors.grey.shade700,
+              size: 24,
+            ),
           ),
         ],
       ),

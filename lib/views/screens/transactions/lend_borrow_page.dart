@@ -2,8 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:borrow_manager/viewmodels/transaction_viewmodel.dart';
 import 'package:borrow_manager/viewmodels/client_viewmodel.dart';
 import 'package:borrow_manager/data/models/client.dart';
 
@@ -15,295 +13,678 @@ class LendBorrowPage extends StatefulWidget {
 }
 
 class _LendBorrowPageState extends State<LendBorrowPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _principalController = TextEditingController(text: '0');
-  final _rateController = TextEditingController(text: '0');
-  final _tenureController = TextEditingController(text: '0');
-  final _noteController = TextEditingController();
-  
-  DateTime _selectedDate = DateTime.now();
-  bool _isGave = true; 
-  Client? _selectedClient;
-  
-  double _monthlyEMI = 0.0;
-  double _totalInterest = 0.0;
-  double _totalPayable = 0.0;
 
-  File? _attachment;
-  final _picker = ImagePicker();
+  final _formKey = GlobalKey<FormState>();
+
+  final _amountController = TextEditingController();
+  final _remarkController = TextEditingController();
+
+
+  Client? _selectedClient;
+
+  bool _showClientDetails = false;
+  bool _isGave = true;
+
+  DateTime _entryDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _principalController.addListener(_calculateRepayment);
-    _rateController.addListener(_calculateRepayment);
-    _tenureController.addListener(_calculateRepayment);
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ClientViewModel>().fetchClients();
     });
   }
 
-  void _calculateRepayment() {
-    final p = double.tryParse(_principalController.text) ?? 0;
-    final r = double.tryParse(_rateController.text) ?? 0;
-    final n = int.tryParse(_tenureController.text) ?? 0;
-    
-    if (p > 0 && r > 0 && n > 0) {
-      final emi = context.read<TransactionViewModel>().calculateEMI(p, r, n);
-      setState(() {
-        _monthlyEMI = emi;
-        _totalPayable = emi * n;
-        _totalInterest = _totalPayable - p;
-      });
-    } else {
-      setState(() {
-        _monthlyEMI = 0;
-        _totalInterest = 0;
-        _totalPayable = 0;
-      });
-    }
-  }
-
-  Future<void> _pickAttachment(ImageSource source) async {
-    final pickedFile = await _picker.pickImage(source: source);
-    if (pickedFile != null) setState(() => _attachment = File(pickedFile.path));
-  }
-
   @override
   Widget build(BuildContext context) {
-    const primaryBlack = Color(0xFF121212);
-    const lightGrey = Color(0xFFF5F5F5);
 
     return Scaffold(
-      backgroundColor: lightGrey,
+
+      backgroundColor: const Color(0xFFF4F4F4),
+
       appBar: AppBar(
-        backgroundColor: primaryBlack,
-        foregroundColor: Colors.white,
-        title: const Text('Lend / Borrow'),
-        actions: [IconButton(icon: const Icon(Icons.menu), onPressed: () {})],
+        elevation: 0,
+        backgroundColor: const Color(0xFF009688),
+
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+
+        title: const Text(
+          "Lend/Borrow",
+          style: TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w500,
+          ),
+        ),
       ),
+
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+
+        padding: const EdgeInsets.all(18),
+
         child: Form(
           key: _formKey,
+
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('TRANSACTION TYPE', style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
+
+              /// CLIENT SECTION
+
               Container(
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15)),
-                child: Row(
+
+                padding: const EdgeInsets.all(18),
+
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+
+                  border: Border.all(
+                    color: Colors.grey.shade300,
+                  ),
+                ),
+
+                child: Column(
                   children: [
-                    Expanded(child: _buildTypeToggle('Gave (Lent)', _isGave, Colors.redAccent, () => setState(() => _isGave = true))),
-                    Expanded(child: _buildTypeToggle('Received (Borrowed)', !_isGave, Colors.greenAccent.shade700, () => setState(() => _isGave = false))),
+
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+
+                      children: [
+
+                        /// IMAGE
+
+                        Column(
+                          children: [
+
+                            Container(
+                              padding: const EdgeInsets.all(3),
+
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.grey.shade500,
+                                  width: 2,
+                                ),
+                              ),
+
+                              child: CircleAvatar(
+                                radius: 30,
+                                backgroundColor: Colors.white,
+
+                                backgroundImage:
+                                _selectedClient?.imagePath != null
+                                    ? FileImage(
+                                  File(_selectedClient!.imagePath!),
+                                )
+                                    : null,
+
+                                child:
+                                _selectedClient?.imagePath == null
+                                    ? Icon(
+                                  Icons.person_outline,
+                                  size: 60,
+                                  color: Colors.grey.shade600,
+                                )
+                                    : null,
+                              ),
+                            ),
+                            const SizedBox(width:30,height: 10),
+
+                            const Text(
+                              "Add Photo",
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(width: 20),
+
+                        /// RIGHT SIDE
+
+                        Expanded(
+                          child: Column(
+                            children: [
+
+                              /// CLIENT NAME
+
+                              Row(
+                                children: [
+
+                                  Expanded(
+                                    child: Autocomplete<Client>(
+
+                                      displayStringForOption: (Client option) => option.name,
+
+                                      optionsBuilder: (TextEditingValue textValue) {
+
+                                        if (textValue.text.isEmpty) {
+                                          return const Iterable<Client>.empty();
+                                        }
+
+                                        return context
+                                            .read<ClientViewModel>()
+                                            .clients
+                                            .where(
+                                              (client) => client.name
+                                              .toLowerCase()
+                                              .contains(
+                                            textValue.text.toLowerCase(),
+                                          ),
+                                        );
+                                      },
+
+                                      onSelected: (Client selectedClient) {
+
+                                        setState(() {
+                                          _selectedClient = selectedClient;
+                                        });
+                                      },
+
+                                      fieldViewBuilder:
+                                          (
+                                          context,
+                                          controller,
+                                          focusNode,
+                                          onEditingComplete,
+                                          ) {
+
+                                        return TextFormField(
+
+                                          controller: controller,
+                                          focusNode: focusNode,
+                                          
+
+                                          style: const TextStyle(
+                                            fontSize: 20,
+                                          ),
+
+                                          decoration: const InputDecoration(
+
+                                            labelText: "Client Name *",
+
+                                            labelStyle: TextStyle(
+                                              fontSize: 20,
+                                              color: Colors.grey,
+                                            ),
+
+                                            border: InputBorder.none,
+
+                                            enabledBorder: UnderlineInputBorder(
+                                              borderSide: BorderSide(
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+
+                                  const SizedBox(width: 10),
+                                  const Icon(
+                                    Icons.search,
+                                    size: 30,
+                                    color: Colors.black,
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 26),
+
+                              /// MOBILE
+
+                              TextFormField(
+
+                                initialValue:
+                                _selectedClient?.mobile ?? "",
+
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                ),
+
+                                decoration: const InputDecoration(
+
+                                  hintText: "Mobile *",
+
+                                  hintStyle: TextStyle(
+                                    fontSize: 20,
+                                    color: Colors.grey,
+                                  ),
+
+                                  border: InputBorder.none,
+
+                                  enabledBorder: UnderlineInputBorder(
+                                    borderSide: BorderSide(
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    /// EXPANDABLE SECTION
+
+                    if (_showClientDetails) ...[
+
+                      const SizedBox(height: 10),
+
+                      const Align(
+                        alignment: Alignment.centerLeft,
+
+
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 95),
+
+                          child: Column(
+                            crossAxisAlignment:
+                            CrossAxisAlignment.start,
+
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 18),
+
+                    Align(
+                      alignment: Alignment.bottomRight,
+
+                      child: GestureDetector(
+
+                        onTap: () {
+                          setState(() {
+                            _showClientDetails =
+                            !_showClientDetails;
+                          });
+                        },
+
+                        child: Icon(
+                          _showClientDetails
+                              ? Icons.keyboard_arrow_up
+                              : Icons.keyboard_arrow_down,
+                          size: 36,
+                          color: Colors.grey,
+
+
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-              const Text('SELECT CLIENT', style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              Consumer<ClientViewModel>(
-                builder: (context, vm, child) => Container(
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15)),
-                  child: DropdownButtonFormField<Client>(
-                    value: _selectedClient,
-                    decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 16)),
-                    hint: const Text('Choose a client'),
-                    items: vm.clients.map((c) => DropdownMenuItem(
-                      value: c,
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 15,
-                            backgroundImage: c.imagePath != null ? FileImage(File(c.imagePath!)) : null,
-                            child: c.imagePath == null ? const Icon(Icons.person, size: 15) : null,
-                          ),
-                          const SizedBox(width: 10),
-                          Text(c.name),
-                        ],
+
+              const SizedBox(height: 15),
+
+              /// TRANSACTION SECTION
+
+              Container(
+
+                padding: const EdgeInsets.all(22),
+
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+
+                  border: Border.all(
+                    color: Colors.grey.shade300,
+                  ),
+                ),
+
+                child: Column(
+                  children: [
+
+                    /// AMOUNT
+
+                    TextFormField(
+                      controller: _amountController,
+
+                      keyboardType: TextInputType.number,
+
+                      style: const TextStyle(
+                        fontSize: 22,
                       ),
-                    )).toList(),
-                    onChanged: (val) => setState(() => _selectedClient = val),
-                    validator: (val) => val == null ? 'Please select a client' : null,
+
+                      decoration: const InputDecoration(
+                        hintText: "Amount *",
+
+                        hintStyle: TextStyle(
+                          fontSize: 22,
+                          color: Colors.grey,
+                        ),
+
+                        border: InputBorder.none,
+
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    /// REMARK
+
+                    TextFormField(
+                      controller: _remarkController,
+
+                      style: const TextStyle(
+                        fontSize: 22,
+                      ),
+
+                      decoration: const InputDecoration(
+                        hintText: "Remark",
+
+                        hintStyle: TextStyle(
+                          fontSize: 22,
+                          color: Colors.grey,
+                        ),
+
+                        border: InputBorder.none,
+
+                        enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 15),
+
+                    /// DATES
+
+                    Row(
+                      children: [
+
+                        const Expanded(
+                          flex: 3,
+
+                          child: Text(
+                            "Entry Date:",
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ),
+
+                        Expanded(
+                          flex: 5,
+
+                          child: Text(
+                            DateFormat(
+                              'dd-MM-yyyy',
+                            ).format(_entryDate),
+
+                            style: const TextStyle(
+                              fontSize: 20,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ),
+
+                        const Icon(
+                          Icons.edit_calendar_outlined,
+                          color: Color(0xFF0097A7),
+                          size: 38,
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    Row(
+                      children: [
+
+                        const Expanded(
+                          child: Text(
+                            "           Due:",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ),
+
+                        const Icon(
+                          Icons.calendar_month_outlined,
+                          color: Color(0xFF0097A7),
+                          size: 38,
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 15),
+
+                    Row(
+                      children: [
+
+                        const Expanded(
+                          child: Text(
+                            " Reminder",
+                            textAlign: TextAlign.left,
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ),
+
+                        const Icon(
+                          Icons.add_alert_outlined,
+                          color: Color(0xFF0097A7),
+                          size: 38,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              /// GAVE / RECEIVED
+
+              Container(
+
+                height: 70,
+                width: 300,
+
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: const Color(0xFF009688),
+                    width: 1,
+                  ),
+
+                  borderRadius: BorderRadius.circular(12),
+                ),
+
+
+                child: Row(
+                  children: [
+
+                    Expanded(
+                      child: GestureDetector(
+
+                        onTap: () {
+                          setState(() {
+                            _isGave = true;
+                          });
+                        },
+
+                        child: Container(
+
+                          color:
+                          _isGave
+                              ? const Color(0xFF17A89B)
+                              : Colors.white,
+
+                          child: Row(
+                            mainAxisAlignment:
+                            MainAxisAlignment.center,
+
+                            children: [
+
+                              Icon(
+                                Icons.arrow_upward,
+                                color:
+                                _isGave
+                                    ? Colors.red
+                                    : Colors.green,
+                                size: 42,
+                              ),
+
+                              const SizedBox(width: 10),
+
+                              Text(
+                                "Gave",
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  color:
+                                  _isGave
+                                      ? Colors.black
+                                      : Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    Expanded(
+                      child: GestureDetector(
+
+                        onTap: () {
+                          setState(() {
+                            _isGave = false;
+                          });
+                        },
+
+                        child: Container(
+                          color:
+                          !_isGave
+                              ? const Color(0xFF17A89B)
+                              : Colors.white,
+
+                          child: Row(
+                            mainAxisAlignment:
+                            MainAxisAlignment.center,
+
+                            children: [
+
+                              Icon(
+                                Icons.arrow_downward,
+                                color: Colors.green,
+                                size: 42,
+                              ),
+
+                              const SizedBox(width: 10),
+
+                              Text(
+                                "Received",
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  color:
+                                  !_isGave
+                                      ? Colors.black
+                                      : Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              /// PAYMENT TYPE
+
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+
+                decoration: BoxDecoration(
+                  color: Colors.white,
+
+                  borderRadius: BorderRadius.circular(12),
+
+                  border: Border.all(
+                    color: Colors.grey.shade300,
+                  ),
+                ),
+
+                child: DropdownButtonFormField<String>(
+
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                  ),
+
+                  value: "-",
+
+
+                  items: const [
+                    DropdownMenuItem(
+                      value: "-",
+                      child: Text("Payment Type"),
+                    ),
+
+                  ],
+
+                  onChanged: (val) {},
+                ),
+              ),
+
+              const SizedBox(height: 15),
+
+              /// SAVE BUTTON
+
+              SizedBox(
+                width: double.infinity,
+                height: 60,
+
+                child: ElevatedButton(
+
+                  onPressed: () {},
+
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF009688),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(0),
+                    ),
+                  ),
+
+                  child: const Text(
+                    "SAVE",
+                    style: TextStyle(
+                      fontSize: 24,
+                      color: Colors.white,
+                      letterSpacing: 1,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
-              _buildInputField('LOAN AMOUNT (PRINCIPAL)', _principalController, Icons.currency_rupee),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(child: _buildInputField('INTEREST RATE (%)', _rateController, null)),
-                  const SizedBox(width: 15),
-                  Expanded(child: _buildInputField('TENURE (MONTHS)', _tenureController, null)),
-                ],
-              ),
-              const SizedBox(height: 24),
-              _buildEMIDisplay(),
-              const SizedBox(height: 24),
-              _buildRepaymentPreview(),
-              const SizedBox(height: 24),
-              const Text('ATTACHMENTS', style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(child: _buildAttachmentBtn('Camera', Icons.camera_alt_outlined, () => _pickAttachment(ImageSource.camera))),
-                  const SizedBox(width: 15),
-                  Expanded(child: _buildAttachmentBtn('Upload File', Icons.attach_file, () => _pickAttachment(ImageSource.gallery))),
-                ],
-              ),
-              const SizedBox(height: 40),
-              SizedBox(
-                width: double.infinity,
-                height: 55,
-                child: ElevatedButton(
-                  onPressed: _submitForm,
-                  style: ElevatedButton.styleFrom(backgroundColor: primaryBlack, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-                  child: const Text('Create Loan Transaction', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                ),
-              ),
             ],
           ),
         ),
       ),
     );
-  }
-
-  Widget _buildTypeToggle(String label, bool isSelected, Color activeColor, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? activeColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Center(child: Text(label, style: TextStyle(color: isSelected ? Colors.white : Colors.black54, fontWeight: FontWeight.bold))),
-      ),
-    );
-  }
-
-  Widget _buildInputField(String label, TextEditingController controller, IconData? icon) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-          child: TextFormField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              prefixIcon: icon != null ? Icon(icon, size: 18) : null,
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEMIDisplay() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Monthly EMI', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                  Text('₹ ${_monthlyEMI.toStringAsFixed(2)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(20)),
-                child: Text('${_rateController.text}% Interest', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-          const Divider(height: 30),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildEmiMetric('TOTAL INTEREST', '₹ ${_totalInterest.toStringAsFixed(2)}'),
-              _buildEmiMetric('TOTAL PAYABLE', '₹ ${_totalPayable.toStringAsFixed(2)}'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmiMetric(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-      ],
-    );
-  }
-
-  Widget _buildRepaymentPreview() {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('REPAYMENT PREVIEW', style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
-            TextButton(onPressed: () {}, child: const Text('View Full', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black))),
-          ],
-        ),
-        Container(
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15)),
-          child: Column(
-            children: List.generate(3, (index) => ListTile(
-              title: Text('Month ${index + 1}', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-              trailing: Text('₹ ${_monthlyEMI.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-              subtitle: Text(DateFormat('dd MMM yyyy').format(_selectedDate.add(Duration(days: 30 * (index + 1)))), style: const TextStyle(fontSize: 11)),
-            )),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAttachmentBtn(String label, IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 80,
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.grey.shade200)),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [Icon(icon, color: Colors.grey), const SizedBox(height: 8), Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12))],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      await context.read<TransactionViewModel>().createLoan(
-        clientName: _selectedClient!.name,
-        principal: double.parse(_principalController.text),
-        annualRate: double.parse(_rateController.text),
-        tenureMonths: int.parse(_tenureController.text),
-        isLent: _isGave,
-        date: _selectedDate,
-        note: _noteController.text,
-      );
-      if (mounted) Navigator.pop(context);
-    }
   }
 }

@@ -1,3 +1,4 @@
+
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -39,6 +40,12 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: const Color(0xFF009688),
 
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.format_list_bulleted, color: Colors.white),
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            }
+        ),
 
         title: const Text(
           "Borrow Manager",
@@ -49,16 +56,6 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
 
-        actions: [
-
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              Icons.more_vert,
-              color: Colors.white,
-            ),
-          ),
-        ],
       ),
 
       // ---------------- BODY ----------------
