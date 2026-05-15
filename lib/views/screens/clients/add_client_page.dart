@@ -130,7 +130,7 @@ class _AddClientPageState extends State<AddClientPage> {
 
                               border: Border.all(
                                 color: Colors.grey, // ring color
-                                width: 3,
+                                width: 2,
                               ),
                             ),
 

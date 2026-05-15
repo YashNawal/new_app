@@ -44,4 +44,6 @@ class Client {
       imagePath: map['imagePath'],
     );
   }
+
+  String? get mobile => null;
 }
