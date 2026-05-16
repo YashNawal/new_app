@@ -1,4 +1,3 @@
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -10,10 +9,12 @@ import 'package:borrow_manager/views/screens/reminders/reminder_list_page.dart';
 import 'package:borrow_manager/viewmodels/transaction_viewmodel.dart';
 import 'package:borrow_manager/viewmodels/client_viewmodel.dart';
 import 'package:borrow_manager/data/models/client.dart';
+import 'package:borrow_manager/views/widgets/app_drawer.dart';
 
 class HomePage extends StatefulWidget {
   final String userName;
   final String userEmail;
+
 
   const HomePage({
     super.key,
@@ -26,6 +27,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final GlobalKey<ScaffoldState>_scaffoldKey = GlobalKey<ScaffoldState>();
+
 
   @override
   Widget build(BuildContext context) {
@@ -43,8 +46,8 @@ class _HomePageState extends State<HomePage> {
         leading: IconButton(
           icon: const Icon(Icons.format_list_bulleted, color: Colors.white),
             onPressed: () {
-              Scaffold.of(context).openDrawer();
-            }
+              _scaffoldKey!.currentState?.openDrawer();
+            },
         ),
 
         title: const Text(
@@ -57,6 +60,8 @@ class _HomePageState extends State<HomePage> {
         ),
 
       ),
+      key: _scaffoldKey,
+      drawer: const AppDrawer(),
 
       // ---------------- BODY ----------------
       body: SingleChildScrollView(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:borrow_manager/views/screens/home/home_page.dart';
-
+import 'package:provider/provider.dart';
+import 'package:borrow_manager/viewmodels/user_viewmodel.dart';
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -21,7 +22,19 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
 
   void _handleLogin() {
+
     if (_formKey.currentState!.validate()) {
+
+      final userVM = Provider.of<UserViewModel>(
+        context,
+        listen: false,
+      );
+
+      userVM.setUser(
+        name: _nameController.text,
+        email: _emailController.text,
+      );
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
